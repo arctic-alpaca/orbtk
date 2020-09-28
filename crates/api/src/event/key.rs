@@ -65,3 +65,49 @@ pub trait KeyDownHandler: Sized + Widget {
         )
     }
 }
+
+/// Used to handle key up events. Could be attached to a widget.
+#[derive(IntoHandler)]
+pub struct KeyUpEventHandler {
+    handler: Rc<KeyHandler>,
+}
+
+impl EventHandler for KeyUpEventHandler {
+    fn handle_event(&self, state_context: &mut StatesContext, event: &EventBox) -> bool {
+        event
+            .downcast_ref::<KeyUpEvent>()
+            .ok()
+            .map_or(false, |event| {
+                (self.handler)(state_context, event.event.clone())
+            })
+    }
+
+    fn handles_event(&self, event: &EventBox) -> bool {
+        event.is_type::<KeyUpEvent>()
+    }
+}
+
+pub trait KeyUpHandler: Sized + Widget {
+    /// Inserts a handler.
+    fn on_key_up<H: Fn(&mut StatesContext, KeyEvent) -> bool + 'static>(
+        self,
+        handler: H,
+    ) -> Self {
+        self.insert_handler(KeyUpEventHandler {
+            handler: Rc::new(handler),
+        })
+    }
+
+    /// Handles events triggered by a specific key.
+    fn on_key_up_key<H: Fn() -> bool + 'static>(self, key: Key, handler: H) -> Self {
+        self.on_key_up(
+            move |_, event| {
+                if event.key == key {
+                    handler()
+                } else {
+                    false
+                }
+            },
+        )
+    }
+}
