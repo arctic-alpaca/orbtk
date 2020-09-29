@@ -5,8 +5,10 @@ pub use self::focus_behavior::*;
 pub use self::mouse_behavior::*;
 pub use self::selection_behavior::*;
 pub use self::text_behavior::*;
+pub use self::canvas_behavior::*;
 
 mod focus_behavior;
 mod mouse_behavior;
 mod selection_behavior;
 mod text_behavior;
+mod canvas_behavior;
