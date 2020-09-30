@@ -15,15 +15,10 @@ impl RenderPipeline for Graphic2DPipeline {
         let mut render_context =
             RenderContext2D::new(render_target.width(), render_target.height());
 
-        let width = 120.0;
-        let height = 120.0;
 
-        let x = (render_target.width() - width) / 2.0;
-        let y = (render_target.height() - height) / 2.0;
-        // render_context.set_fill_style(utils::Brush::SolidColor(Color::from("#000000")));
+       render_context.set_fill_style(utils::Brush::SolidColor(Color::from("#FFFFFF")));
 
-        render_context.set_fill_style(utils::Brush::SolidColor(self.color));
-        render_context.fill_rect(x, y, width, height);
+        render_context.fill_rect(0.0, 0.0, render_target.width(), render_target.width());
         render_target.draw(render_context.data());
     }
 }
