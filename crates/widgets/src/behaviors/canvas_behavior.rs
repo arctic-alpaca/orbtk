@@ -178,7 +178,7 @@ impl Template for CanvasBehavior {
                 states
                     .get_mut::<CanvasBehaviorState>(id)
                     .action(CanvasAction::MouseDown(m));
-                true
+                false
             })
             .on_changed("focused", move |states, _| {
                 states
