@@ -1,6 +1,6 @@
 use super::behaviors::{MouseBehavior, CanvasBehavior};
 
-use crate::{api::prelude::*, prelude::*, proc_macros::*, theme::prelude::*};
+use crate::{api::prelude::*, proc_macros::*};
 
 widget!(
     /// Canvas is used to render 3D graphics.

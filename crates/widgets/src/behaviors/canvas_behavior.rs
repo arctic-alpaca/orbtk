@@ -3,15 +3,8 @@ use std::collections::VecDeque;
 use crate::{
     api::prelude::*,
     proc_macros::*,
-    render::TextMetrics,
-    shell::prelude::{Key, KeyEvent},
-    theme::fonts,
-    Cursor, TextBlock,
 };
 
-// --- KEYS --
-pub static FOCUSED_STATE: &str = "focused";
-// --- KEYS --
 
 /// Actions of CanvasBehaviorState
 #[derive(Clone)]
@@ -19,8 +12,6 @@ pub enum CanvasAction {
     MouseDown(Mouse),
     Drop(String, Point),
     FocusedChanged,
-    /// Used to force an update on visual state and offset.
-    ForceUpdate,
 }
 
 
@@ -30,8 +21,8 @@ pub struct CanvasBehaviorState {
     action: VecDeque<CanvasAction>,
     target: Entity,
     pressed: bool,
-    self_update: bool,
-    update_selection: bool,
+    event_adapter: EventAdapter,
+    window: Entity,
 }
 
 impl CanvasBehaviorState {
@@ -41,16 +32,16 @@ impl CanvasBehaviorState {
     }
 
 
-    fn request_focus(&self, ctx: &mut Context) {
-        ctx.push_event_by_window(FocusEvent::RequestFocus(self.target));
+    fn request_focus(&self) {
+        self.event_adapter.push_event_direct(self.window, FocusEvent::RequestFocus(self.target));
     }
 
 
     // handles mouse down event
-    fn mouse_down(&mut self, ctx: &mut Context, mouse: Mouse) {
+    fn mouse_down(&mut self, ctx: &mut Context, _mouse: Mouse) {
         self.pressed = true;
         if !*CanvasBehavior::focused_ref(&ctx.widget()) {
-            self.request_focus(ctx);
+            self.request_focus();
             return;
         }
     }
@@ -65,16 +56,17 @@ impl State for CanvasBehaviorState {
     fn init(&mut self, _: &mut Registry, ctx: &mut Context) {
         self.target = (*CanvasBehavior::target_ref(&ctx.widget())).into();
         ctx.get_widget(self.target).update(false);
-
+        self.event_adapter = ctx.event_adapter();
+        self.window = ctx.entity_of_window();
     }
 
-    fn update(&mut self, registry: &mut Registry, ctx: &mut Context) {
+    fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
         if let Some(action) = self.action.pop_front() {
             match action {
                 CanvasAction::MouseDown(p) => {
                     self.mouse_down(ctx, p)
                 }
-                CanvasAction::Drop(text, position) => {
+                CanvasAction::Drop(_text, position) => {
                     if check_mouse_condition(position, &ctx.get_widget(self.target)) {
                         println!("you need to implement drop")
                     }
@@ -82,44 +74,23 @@ impl State for CanvasBehaviorState {
                 CanvasAction::FocusedChanged => {
                     println!("focus changed canvas_behavior");
                 },
-                CanvasAction::ForceUpdate => (),
-
             }
-        }
-    }
-
-    fn update_post_layout(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        if self.update_selection {
-            self.update_selection = false;
         }
     }
 }
 
 widget!(
-    /// The CanvasBehavior widget shares the same logic of handling text input between
-    /// tex-related widgets.
+    /// The CanvasBehavior widget implements interactivity (mouse and keyboard input) for the `Canvas`
     ///
-    /// Attaching to a widget makes it able to handle text input like:
-    /// * input characters by keyboard
-    /// * select all text with Ctrl+A key combination
-    /// * delete selected text with Backspace or Delete
-    /// * move cursor by the left or right arrow keys or clicking with mouse
-    /// * delete characters by pressing the Backspace or the Delete key
-    /// * run on_activate() callback on pressing the Enter key
+    /// Attaching to a widget makes it able to handle mouse and keyboard input.
+    /// Basicly it allows a widget to use `.on_...` methods
     ///
     /// CanvasBehavior needs the following prerequisites to able to work:
-    /// * a `cursor`: the [`Entity`] of a [`Cursor`] widget
     /// * a `target`: the [`Entity`] of the target widget
-    /// * a `text_block`: the [`Entity`] of the [`TextBlock`] widget
     ///
     /// * and must inherit the following properties from its target:
     ///     * focused
-    ///     * font
-    ///     * font_size
-    ///     * lost_focus_on_activation
     ///     * request_focus
-    ///     * text
-    ///     * selection
     ///
     /// # Example
     ///
@@ -134,26 +105,33 @@ widget!(
     ///
     /// impl Template for MyInput {
     ///     fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
-    ///         // Cursor depends on a TextBlock
     ///
-    ///        CanvasBehavior::new()
-    ///            .focused(id)
+    ///        self.name("Canvas").style("canvas-three")
+    ///        .child(CanvasBehavior::new()
     ///            .target(id.0)
+    ///            .focused(id)
     ///            .request_focus(id)
     ///            .build(ctx)
-    /// }
+    ///        )
+    ///        .child(
+    ///            MouseBehavior::new()
+    ///            .pressed(id)
+    ///            .enabled(id)
+    ///            .target(id.0)
+    ///            .build(ctx),
+    ///        )
+    ///    }
     /// ```
     ///
     /// [`Entity`]: https://docs.rs/dces/0.2.0/dces/entity/struct.Entity.html
-    /// [`Cursor`]: ../struct.Cursor.html
     CanvasBehavior<CanvasBehaviorState>: ActivateHandler, KeyUpHandler, KeyDownHandler, DropHandler, MouseHandler {
-        /// Reference the target (parent) widget e.g. `TextBox` or `PasswordBox`.
+        /// Reference the target (parent) widget e.g. `Canvas`.
         target: u32,
 
         /// Sets or shares the focused property.
         focused: bool,
 
-        /// Sets or shares the request_focus property. Used to request focus from outside.Set to `true` to request focus.
+        /// Sets or shares the request_focus property. Used to request focus from outside. Set to `true` to request focus.
         request_focus: bool
     }
 );
