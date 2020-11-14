@@ -1,10 +1,7 @@
-use std::collections::VecDeque;
-
 use crate::{
     api::prelude::*,
     proc_macros::*,
 };
-
 
 /// Actions of CanvasBehaviorState
 #[derive(Clone)]
@@ -18,7 +15,6 @@ pub enum CanvasAction {
 /// The `CanvasBehaviorState` handles the text processing of the `CanvasBehavior` widget.
 #[derive(Default, AsAny)]
 pub struct CanvasBehaviorState {
-    action: VecDeque<CanvasAction>,
     target: Entity,
     pressed: bool,
     event_adapter: EventAdapter,
@@ -26,11 +22,6 @@ pub struct CanvasBehaviorState {
 }
 
 impl CanvasBehaviorState {
-    /// Sets an action the the state.
-    pub fn action(&mut self, action: CanvasAction) {
-        self.action.push_back(action);
-    }
-
 
     fn request_focus(&self) {
         self.event_adapter.push_event_direct(self.window, FocusEvent::RequestFocus(self.target));
@@ -60,8 +51,13 @@ impl State for CanvasBehaviorState {
         self.window = ctx.entity_of_window();
     }
 
-    fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        if let Some(action) = self.action.pop_front() {
+    fn messages(
+        &mut self,
+        mut messages: MessageReader,
+        _registry: &mut Registry,
+        ctx: &mut Context,
+    ) {
+        for action in messages.read::<CanvasAction>() {
             match action {
                 CanvasAction::MouseDown(p) => {
                     self.mouse_down(ctx, p)
@@ -140,28 +136,20 @@ impl Template for CanvasBehavior {
     fn template(self, id: Entity, _: &mut BuildContext) -> Self {
         self.name("CanvasBehavior")
             .focused(false)
-            .on_drop_file(move |states, file_name, position| {
-                states
-                    .get_mut::<CanvasBehaviorState>(id)
-                    .action(CanvasAction::Drop(file_name, position));
+            .on_drop_file(move |ctx, file_name, position| {
+                ctx.send_message(CanvasAction::Drop(file_name, position), id);
                 false
             })
-            .on_drop_text(move |states, file_name, position| {
-                states
-                    .get_mut::<CanvasBehaviorState>(id)
-                    .action(CanvasAction::Drop(file_name, position));
+            .on_drop_text(move |ctx, file_name, position| {
+                ctx.send_message(CanvasAction::Drop(file_name, position), id);
                 false
             })
-            .on_mouse_down(move |states, m| {
-                states
-                    .get_mut::<CanvasBehaviorState>(id)
-                    .action(CanvasAction::MouseDown(m));
+            .on_mouse_down(move |ctx, m| {
+                ctx.send_message(CanvasAction::MouseDown(m), id);
                 false
             })
-            .on_changed("focused", move |states, _| {
-                states
-                    .get_mut::<CanvasBehaviorState>(id)
-                    .action(CanvasAction::FocusedChanged);
+            .on_changed("focused", move |ctx, _| {
+                ctx.send_message(CanvasAction::FocusedChanged, id);
             })
     }
 }
