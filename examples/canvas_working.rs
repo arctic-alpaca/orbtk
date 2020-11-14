@@ -79,12 +79,12 @@ impl Template for MainView {
                             .water_mark("TextBox...")
                             .text(("text", id))
                             .margin((0, 8, 0, 0))
-                            .attach(Grid::row(0))
+                            .attach(Grid::row(1))
                             .build(ctx),
                     )
                     .child(
                         TextBlock::new()
-                            .attach(Grid::row(1))
+                            .attach(Grid::row(0))
                             .text("Canvas (render with OrbTk)")
                             .style("text-block")
                             .style("text_block_header")
